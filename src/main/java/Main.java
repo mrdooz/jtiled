@@ -2,6 +2,8 @@
 
 package JTiled;
 
+import com.sun.org.apache.xml.internal.serialize.OutputFormat;
+import com.sun.org.apache.xml.internal.serialize.XMLSerializer;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
@@ -20,10 +22,16 @@ import javafx.scene.input.TransferMode;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import sun.plugin.dom.core.Document;
 
+import javax.lang.model.element.Element;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -49,12 +57,15 @@ public class Main extends Application {
         String path;
         Image img;
         Vector2i tileSize;
+        Vector2i numTiles;
+        int gidStart;   // used for serialization
 
         Tileset(String name, String path, Vector2i tileSize) throws FileNotFoundException {
             this.name = name;
             this.path = path;
             this.tileSize = tileSize;
             this.img = new Image(new FileInputStream(path));
+            this.numTiles = new Vector2i((int)this.img.getWidth() / this.tileSize.x, (int)this.img.getHeight() / this.tileSize.y);
         }
 
         void drawTile(GraphicsContext gc, int x, int y, float destX, float destY) {
@@ -74,12 +85,34 @@ public class Main extends Application {
 
     class Layer {
         String name;
-        Tileset tileset;
+        Map map;
+        boolean visible;
 
-        Layer(String name, Tileset tileset) {
+        Layer(String name, Map map) {
             this.name = name;
-            this.tileset = tileset;
+            this.map = map;
+            tiles = new Tile[map.size.x][map.size.y];
+            this.visible = true;
         }
+
+        void Draw(GraphicsContext gc) {
+            gc.setStroke(Color.GRAY);
+            gc.setLineWidth(0.5);
+
+            Vector2i size = map.size;
+            Vector2i tileSize = map.tileSize;
+
+            for (int i = 0; i < size.y; ++i) {
+                for (int j = 0; j < size.x; ++j) {
+                    Tile tile = tiles[i][j];
+                    if (tile != null) {
+                        tile.Draw(gc, j * tileSize.x, i * tileSize.y);
+                    }
+                }
+            }
+        }
+
+        Tile[][] tiles;
 
         @Override
         public String toString() {
@@ -142,7 +175,6 @@ public class Main extends Application {
         Map(Vector2i size, Vector2i tileSize) {
             this.size = size;
             this.tileSize = tileSize;
-            tiles = new Tile[size.x][size.y];
         }
 
         void Draw(GraphicsContext gc)
@@ -150,13 +182,8 @@ public class Main extends Application {
             gc.setStroke(Color.GRAY);
             gc.setLineWidth(0.5);
 
-            for (int i = 0; i < size.y; ++i) {
-                for (int j = 0; j < size.x; ++j) {
-                    Tile tile = tiles[i][j];
-                    if (tile != null) {
-                        tile.Draw(gc, j * tileSize.x, i * tileSize.y);
-                    }
-                }
+            for (Layer layer : layers) {
+                layer.Draw(gc);
             }
 
             for (int i = 0; i < size.y; ++i) {
@@ -166,7 +193,8 @@ public class Main extends Application {
             }
         }
 
-        Tile[][] tiles;
+        Layer curLayer;
+        ObservableList<Layer> layers = FXCollections.observableArrayList();
     }
 
     class Brush
@@ -208,7 +236,6 @@ public class Main extends Application {
         }
     }
 
-    ObservableList<Layer> layers = FXCollections.observableArrayList(new Layer("test", null));
     ObservableList<Tileset> tilesets = FXCollections.observableArrayList();
     List<Map> maps = new ArrayList<>();
 
@@ -227,7 +254,8 @@ public class Main extends Application {
 
     Tab createLayersTab() {
         Tab tab = new Tab("Layers");
-        ListView<Layer> layersListView = new ListView<>(layers);
+        // TODO: this is pretty horrible :)
+        ListView<Layer> layersListView = new ListView<>(selectedMap.layers);
         tab.setContent(layersListView);
         return tab;
     }
@@ -254,6 +282,10 @@ public class Main extends Application {
             Map map = new Map(new Vector2i(100, 100), new Vector2i(16, 16));
             maps.add(map);
             selectedMap = map;
+            // add a new default
+            Layer layer = new Layer("default", map);
+            map.curLayer = layer;
+            map.layers.add(layer);
 
             Canvas canvas = new Canvas();
             pane.setContent(canvas);
@@ -324,7 +356,7 @@ public class Main extends Application {
                     if (x >= selectedMap.size.x || y >= selectedMap.size.y)
                         continue;
 
-                    selectedMap.tiles[x][y] = brush.tiles[j][i];
+                    selectedMap.curLayer.tiles[x][y] = brush.tiles[j][i];
                 }
             }
         }
@@ -502,6 +534,97 @@ public class Main extends Application {
         return tab;
     }
 
+    void saveMap() {
+
+        if (selectedMap == null)
+            return;
+
+        DocumentBuilderFactory icFactory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder icBuilder;
+        try {
+            icBuilder = icFactory.newDocumentBuilder();
+            org.w3c.dom.Document doc = icBuilder.newDocument();
+            org.w3c.dom.Element map = doc.createElement("map");
+
+            int w = selectedMap.size.x;
+            int h = selectedMap.size.y;
+            int tw = selectedMap.tileSize.x;
+            int th = selectedMap.tileSize.y;
+
+            int cx = w / tw;
+            int cy = h / th;
+
+            // add the map root
+            map.setAttribute("width", String.valueOf(w));
+            map.setAttribute("height", String.valueOf(h));
+            map.setAttribute("tilewidth", String.valueOf(tw));
+            map.setAttribute("tileheight", String.valueOf(th));
+
+            // add the tilesets
+            int gid = 0;
+            for (Tileset tileset : tilesets) {
+                org.w3c.dom.Element t = doc.createElement("tileset");
+                tileset.gidStart = gid;
+                t.setAttribute("gid", String.valueOf(gid));
+                t.setAttribute("name", tileset.name);
+                t.setAttribute("tilewidth", String.valueOf(tileset.numTiles.x));
+                t.setAttribute("tileheight", String.valueOf(tileset.numTiles.y));
+                t.setAttribute("spacing", String.valueOf(0));
+                t.setAttribute("margin", String.valueOf(0));
+
+                // add the image
+                org.w3c.dom.Element img = doc.createElement("image");
+                img.setAttribute("source", tileset.path);
+                img.setAttribute("width", String.valueOf((int)tileset.img.getWidth()));
+                img.setAttribute("height", String.valueOf((int)tileset.img.getHeight()));
+                t.appendChild(img);
+
+                map.appendChild(t);
+                gid += tileset.numTiles.x * tileset.numTiles.y;
+            }
+
+            // add the layers
+            for (Layer layer : selectedMap.layers) {
+                org.w3c.dom.Element elem = doc.createElement("layer");
+                elem.setAttribute("name", layer.name);
+                elem.setAttribute("visible", String.valueOf(layer.visible));
+
+                // add the actual tiles
+                org.w3c.dom.Element data = doc.createElement("data");
+
+                for (int y = 0; y < selectedMap.size.y; ++y) {
+                    for (int x = 0; x < selectedMap.size.x; ++x) {
+                        org.w3c.dom.Element t = doc.createElement("tile");
+                        Tile tile = layer.tiles[x][y];
+                        if (tile != null) {
+                            int id = tile.pos.y * cx + tile.pos.x;
+                            t.setAttribute("id", String.valueOf(id));
+                            data.appendChild(t);
+                        }
+                    }
+                }
+                elem.appendChild(data);
+                map.appendChild(elem);
+            }
+
+            doc.appendChild(map);
+
+            OutputFormat format = new OutputFormat(doc);
+            format.setIndenting(true);
+            String filename = "/Users/dooz/tmp/1.xml";
+            XMLSerializer serializer = null;
+            try {
+                serializer = new XMLSerializer(new FileOutputStream(new File(filename)), format);
+                serializer.serialize(doc);
+                System.out.println(doc);
+            } catch (java.io.IOException e) {
+                e.printStackTrace();
+            }
+        } catch (ParserConfigurationException e) {
+            e.printStackTrace();
+        }
+    }
+
     @Override
     public void start(Stage primaryStage) throws Exception{
 
@@ -551,6 +674,7 @@ public class Main extends Application {
             Tileset t = new Tileset("test", "/Users/dooz/tmp/dungeon_sheet_0.png", new Vector2i(16, 16));
             tilesets.add(t);
             selectedTileset = t;
+            saveMap();
         }
     }
 
