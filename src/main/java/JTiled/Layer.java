@@ -24,7 +24,7 @@ public class Layer {
 
         for (int i = 0; i < size.y; ++i) {
             for (int j = 0; j < size.x; ++j) {
-                Tile tile = tiles[i][j];
+                Tile tile = tiles[j][i];
                 if (tile != null) {
                     tile.Draw(gc, j * tileSize.x, i * tileSize.y);
                 }

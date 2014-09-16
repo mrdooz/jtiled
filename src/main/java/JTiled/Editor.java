@@ -165,6 +165,13 @@ public class Editor extends Application {
         }
     }
 
+    void applyBrush(Vector2i pos) {
+        if (curBrush == null || selectedMap == null)
+            return;
+
+        selectedMap.ApplyBrush(curBrush, pos);
+    }
+
     @Override
     public void start(Stage primaryStage) throws Exception{
 

@@ -52,18 +52,13 @@ public class MapTab {
 
         canvas.addEventHandler(MouseEvent.MOUSE_DRAGGED,
                 mouseEvent -> {
-                    // TODO: handle scrolling offset
                     mousePos = snappedPos(mouseEvent.getX(), mouseEvent.getY());
-                    if (editor.curBrush != null) {
-                        ApplyBrush(editor.curBrush, mousePos);
-                    }
+                    editor.applyBrush(mousePos);
                 });
 
         canvas.addEventHandler(MouseEvent.MOUSE_RELEASED,
                 mouseEvent -> {
-                    if (editor.curBrush != null) {
-                        ApplyBrush(editor.curBrush, mousePos);
-                    }
+                    editor.applyBrush(mousePos);
                 });
 
 
@@ -90,20 +85,5 @@ public class MapTab {
                 }
             }
         }.start();
-    }
-
-    void ApplyBrush(Brush brush, Vector2i pos) {
-        for (int i = 0; i < brush.size.y; ++i) {
-            for (int j = 0; j < brush.size.x; ++j) {
-
-                int x = pos.x + j;
-                int y = pos.y + i;
-
-                if (x >= editor.selectedMap.size.x || y >= editor.selectedMap.size.y)
-                    continue;
-
-                editor.selectedMap.curLayer.tiles[x][y] = brush.tiles[j][i];
-            }
-        }
     }
 }

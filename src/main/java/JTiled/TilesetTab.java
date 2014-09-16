@@ -1,7 +1,6 @@
 package JTiled;
 
 import javafx.animation.AnimationTimer;
-import javafx.geometry.Point2D;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.ScrollPane;
@@ -20,6 +19,8 @@ public class TilesetTab {
     ScrollPane pane;
     Vector2i mousePos = new Vector2i(0,0);
     Vector2i dragStart = new Vector2i(0,0);
+    Vector2i topLeft = new Vector2i(0, 0);
+    Vector2i dragEnd = new Vector2i(0,0);
     Vector2i selectionSize = new Vector2i(1,1);
 
     double zoom = 2;
@@ -29,13 +30,15 @@ public class TilesetTab {
         if (editor.selectedTileset == null)
             return new Vector2i(0,0);
 
-        Point2D p = pane.localToScreen(mouseEvent.getX(), mouseEvent.getY());
-
         double gx = editor.selectedTileset.tileSize.x;
         double gy = editor.selectedTileset.tileSize.y;
         return new Vector2i(
                 (int)(mouseEvent.getX() / (zoom * (gridSpacing + gx))),
                 (int)(mouseEvent.getY() / (zoom * (gridSpacing + gy))));
+    }
+
+    void calcSelectedSize(Vector2i a, Vector2i b) {
+        selectionSize = new Vector2i(b.x - a.x + 1, b.y - a.y + 1);
     }
 
     TilesetTab(Editor editor, ScrollPane pane) {
@@ -57,24 +60,24 @@ public class TilesetTab {
                     mousePos = snappedPos(mouseEvent);
                     int ax = Math.min(mousePos.x, dragStart.x);
                     int ay = Math.min(mousePos.y, dragStart.y);
-                    int bx = Math.max(mousePos.x, dragStart.x);
-                    int by = Math.max(mousePos.y, dragStart.y);
-                    selectionSize = new Vector2i(bx - ax + 1, bx - ax + 1);
+                    int bx = Math.max(mousePos.x, dragEnd.x);
+                    int by = Math.max(mousePos.y, dragEnd.y);
+                    topLeft = new Vector2i(ax, ay);
+                    calcSelectedSize(topLeft, new Vector2i(bx, by));
                 });
 
         // mouse down, start marking a brush
         canvas.addEventHandler(MouseEvent.MOUSE_PRESSED,
                 mouseEvent -> {
                     dragStart = snappedPos(mouseEvent);
-                    selectionSize = new Vector2i(1,1);
+                    dragEnd = dragStart;
+                    calcSelectedSize(dragStart, dragEnd);
                 });
 
         // mouse up, end marking brush
         canvas.addEventHandler(MouseEvent.MOUSE_RELEASED,
                 mouseEvent -> {
-                    int ax = Math.min(mousePos.x, dragStart.x);
-                    int ay = Math.min(mousePos.y, dragStart.y);
-                    editor.curBrush = new Brush(new Vector2i(ax, ay), selectionSize, editor.selectedTileset);
+                    editor.curBrush = new Brush(topLeft, selectionSize, editor.selectedTileset);
                 });
 
         new AnimationTimer() {
@@ -107,7 +110,7 @@ public class TilesetTab {
                                 gc.drawImage(img, x, y, gx, gy, dx, dy, gx, gy);
 
                                 // highlight the tile if it's inside the current brush
-                                if (j >= dragStart.x && i >= dragStart.y && j < dragStart.x + selectionSize.x && i < dragStart.y + selectionSize.y) {
+                                if (j >= topLeft.x && i >= topLeft.y && j < topLeft.x + selectionSize.x && i < topLeft.y + selectionSize.y) {
                                     gc.fillRect(dx, dy, gx, gy);
                                 }
                             }
