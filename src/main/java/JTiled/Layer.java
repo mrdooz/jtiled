@@ -16,8 +16,6 @@ public class Layer {
     }
 
     void Draw(GraphicsContext gc) {
-//        gc.setStroke(Color.GRAY);
-//        gc.setLineWidth(0.5);
 
         Vector2i size = map.size;
         Vector2i tileSize = map.tileSize;

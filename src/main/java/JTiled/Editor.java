@@ -5,15 +5,16 @@ package JTiled;
 import com.sun.org.apache.xml.internal.serialize.OutputFormat;
 import com.sun.org.apache.xml.internal.serialize.XMLSerializer;
 import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.StackPane;
+import javafx.scene.layout.*;
 import javafx.stage.Stage;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -21,8 +22,9 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.util.ArrayList;
-import java.util.List;
+import java.net.URL;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Editor extends Application {
 
@@ -36,12 +38,23 @@ public class Editor extends Application {
 
     List<TilesetTab> tilesetTabs = new ArrayList<>();
     List<MapTab> mapTabs = new ArrayList<>();
+    IdentityHashMap<Tab, Map> tabToMap = new IdentityHashMap<>();
+
+    TabPane mapPane = new TabPane();
 
     Tab createLayersTab() {
         Tab tab = new Tab("Layers");
+
         // TODO: this is pretty horrible :)
         ListView<Layer> layersListView = new ListView<>(selectedMap.layers);
-        tab.setContent(layersListView);
+
+        HBox menuBox = new HBox(8);
+        menuBox.getChildren().addAll(new Button("Cut"), new Button("Copy"), new Button("Paste"));
+        VBox vbox = new VBox(layersListView, menuBox);
+        vbox.setMargin(menuBox, new Insets(8, 8, 8, 8));
+        VBox.setVgrow(layersListView, Priority.ALWAYS);
+
+        tab.setContent(vbox);
         return tab;
     }
 
@@ -62,16 +75,12 @@ public class Editor extends Application {
         return tab;
     }
 
-    Tab createMapTab() {
-        Tab tab = new Tab("map1");
-
+    Tab createMapTab(Map map) {
+        Tab tab = new Tab(map.name);
         ScrollPane pane = new ScrollPane();
-        pane.setHbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
-        pane.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
         tab.setContent(pane);
-
-        mapTabs.add(new MapTab(this, pane));
-
+        mapTabs.add(new MapTab(map, this, pane));
+        tabToMap.put(tab, map);
         return tab;
     }
 
@@ -92,24 +101,22 @@ public class Editor extends Application {
             int tw = selectedMap.tileSize.x;
             int th = selectedMap.tileSize.y;
 
-            int cx = w / tw;
-            int cy = h / th;
-
             // add the map root
+            map.setAttribute("orientation", "orthogonal");
             map.setAttribute("width", String.valueOf(w));
             map.setAttribute("height", String.valueOf(h));
             map.setAttribute("tilewidth", String.valueOf(tw));
             map.setAttribute("tileheight", String.valueOf(th));
 
             // add the tilesets
-            int gid = 0;
+            int gid = 1;
             for (Tileset tileset : tilesets) {
                 org.w3c.dom.Element t = doc.createElement("tileset");
                 tileset.gidStart = gid;
-                t.setAttribute("gid", String.valueOf(gid));
+                t.setAttribute("firstgid", String.valueOf(gid));
                 t.setAttribute("name", tileset.name);
-                t.setAttribute("tilewidth", String.valueOf(tileset.numTiles.x));
-                t.setAttribute("tileheight", String.valueOf(tileset.numTiles.y));
+                t.setAttribute("tilewidth", String.valueOf(tw));
+                t.setAttribute("tileheight", String.valueOf(th));
                 t.setAttribute("spacing", String.valueOf(0));
                 t.setAttribute("margin", String.valueOf(0));
 
@@ -129,6 +136,8 @@ public class Editor extends Application {
                 org.w3c.dom.Element elem = doc.createElement("layer");
                 elem.setAttribute("name", layer.name);
                 elem.setAttribute("visible", String.valueOf(layer.visible));
+                elem.setAttribute("width", String.valueOf(w));
+                elem.setAttribute("height", String.valueOf(h));
 
                 // add the actual tiles
                 org.w3c.dom.Element data = doc.createElement("data");
@@ -137,11 +146,9 @@ public class Editor extends Application {
                     for (int x = 0; x < selectedMap.size.x; ++x) {
                         org.w3c.dom.Element t = doc.createElement("tile");
                         Tile tile = layer.tiles[x][y];
-                        if (tile != null) {
-                            int id = tile.pos.y * cx + tile.pos.x;
-                            t.setAttribute("id", String.valueOf(id));
-                            data.appendChild(t);
-                        }
+                        int id = tile != null ? 1 + tile.pos.y * tile.tileset.numTiles.x + tile.pos.x : 0;
+                        t.setAttribute("gid", String.valueOf(id));
+                        data.appendChild(t);
                     }
                 }
                 elem.appendChild(data);
@@ -153,10 +160,9 @@ public class Editor extends Application {
             try {
                 OutputFormat format = new OutputFormat(doc);
                 format.setIndenting(true);
-                String filename = "/Users/dooz/tmp/1.xml";
+                String filename = "/Users/dooz/projects/gdx/1.tmx";
                 XMLSerializer serializer = new XMLSerializer(new FileOutputStream(new File(filename)), format);
                 serializer.serialize(doc);
-                System.out.println(doc);
             } catch (java.io.IOException e) {
                 e.printStackTrace();
             }
@@ -179,7 +185,18 @@ public class Editor extends Application {
         Scene scene = new Scene(root, 1024, 768);
         BorderPane border = new BorderPane();
         HBox hbox = new HBox();
-        hbox.getChildren().add(new Button("test"));
+        Button btnSave = new Button("save");
+        btnSave.setOnAction(event -> saveMap());
+        Button btnNewMap = new Button("new map");
+        btnNewMap.setOnAction(event -> {
+            URL url = getClass().getResource("/NewMap.fxml");
+            Map.buildFromDialog(url, m -> {
+                if (m != null) {
+                    mapPane.getTabs().add(createMapTab(m));
+                }
+            });
+        });
+        hbox.getChildren().addAll(btnSave, btnNewMap);
         border.setTop(hbox);
 
         SplitPane split = new SplitPane();
@@ -187,8 +204,15 @@ public class Editor extends Application {
         split.prefHeightProperty().bind(scene.heightProperty());
 
         split.setOrientation(Orientation.HORIZONTAL);
-        TabPane mapPane = new TabPane();
-        mapPane.getTabs().addAll(createMapTab());
+        mapPane.getTabs().add(createMapTab(new Map("map1", new Vector2i(100, 100), new Vector2i(16, 16))));
+
+        mapPane.getSelectionModel().selectedItemProperty().addListener(
+                (observableValue, oldTab, newTab) -> {
+                    // find the map associated with the new tab
+                    Map m = tabToMap.get(newTab);
+                    selectedMap = m;
+                }
+        );
 
         StackPane right = new StackPane();
         SplitPane rightSplit = new SplitPane();
@@ -221,7 +245,6 @@ public class Editor extends Application {
             Tileset t = new Tileset("test", "/Users/dooz/tmp/dungeon_sheet_0.png", new Vector2i(16, 16));
             tilesets.add(t);
             selectedTileset = t;
-            saveMap();
         }
     }
 

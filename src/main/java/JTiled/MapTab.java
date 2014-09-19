@@ -24,11 +24,14 @@ public class MapTab {
     }
 
 
-    MapTab(Editor editor, ScrollPane pane) {
+    MapTab(Map map, Editor editor, ScrollPane pane) {
         this.editor = editor;
-        Map map = new Map(new Vector2i(100, 100), new Vector2i(16, 16));
         editor.maps.add(map);
-        editor.selectedMap = map;
+
+        // if this is the first map, mark is as selected
+        if (editor.selectedMap == null)
+            editor.selectedMap = map;
+
         // add a new default
         Layer layer = new Layer("default", map);
         map.curLayer = layer;
@@ -42,7 +45,6 @@ public class MapTab {
 
         canvas.addEventHandler(MouseEvent.MOUSE_MOVED,
                 mouseEvent -> {
-                    // TODO: handle scrolling offset
                     mousePos = snappedPos(mouseEvent.getX(), mouseEvent.getY());
                 });
 
@@ -60,7 +62,6 @@ public class MapTab {
                 mouseEvent -> {
                     editor.applyBrush(mousePos);
                 });
-
 
         new AnimationTimer() {
             @Override
