@@ -189,8 +189,7 @@ public class Editor extends Application {
         btnSave.setOnAction(event -> saveMap());
         Button btnNewMap = new Button("new map");
         btnNewMap.setOnAction(event -> {
-            URL url = getClass().getResource("/NewMap.fxml");
-            Map.buildFromDialog(url, m -> {
+            Map.buildFromDialog(getClass().getResource("/NewMap.fxml"), m -> {
                 if (m != null) {
                     mapPane.getTabs().add(createMapTab(m));
                 }
@@ -204,7 +203,8 @@ public class Editor extends Application {
         split.prefHeightProperty().bind(scene.heightProperty());
 
         split.setOrientation(Orientation.HORIZONTAL);
-        mapPane.getTabs().add(createMapTab(new Map("map1", new Vector2i(100, 100), new Vector2i(16, 16))));
+        mapPane.getTabs().add(createMapTab(new Map("map1", new Vector2i(100, 100), new Vector2i(32, 32))));
+//        mapPane.getTabs().add(createMapTab(new Map("map1", new Vector2i(100, 100), new Vector2i(16, 16))));
 
         mapPane.getSelectionModel().selectedItemProperty().addListener(
                 (observableValue, oldTab, newTab) -> {
@@ -242,7 +242,8 @@ public class Editor extends Application {
         primaryStage.show();
 
         if (true) {
-            Tileset t = new Tileset("test", "/Users/dooz/tmp/dungeon_sheet_0.png", new Vector2i(16, 16));
+            Tileset t = new Tileset("test", "/Users/dooz/tmp/tmw_desert_spacing.png", new Vector2i(32, 32));
+//            Tileset t = new Tileset("test", "/Users/dooz/tmp/dungeon_sheet_0.png", new Vector2i(16, 16));
             tilesets.add(t);
             selectedTileset = t;
         }

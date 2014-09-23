@@ -1,17 +1,25 @@
 package JTiled;
 
 import javafx.animation.AnimationTimer;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.image.Image;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.paint.Color;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.URL;
 
 public class TilesetTab {
 
@@ -24,17 +32,24 @@ public class TilesetTab {
     Vector2i selectionSize = new Vector2i(1,1);
 
     double zoom = 2;
-    double gridSpacing = 2;
 
     Vector2i snappedPos(MouseEvent mouseEvent) {
         if (editor.selectedTileset == null)
             return new Vector2i(0,0);
 
+        Tileset t = editor.selectedTileset;
+
+        int paddingX = Math.max(t.padding.x, 1);
+        int paddingY = Math.max(t.padding.y, 1);
+
         double gx = editor.selectedTileset.tileSize.x;
         double gy = editor.selectedTileset.tileSize.y;
+
+        double x = mouseEvent.getX() - zoom * t.offset.x;
+        double y = mouseEvent.getY() - zoom * t.offset.y;
         return new Vector2i(
-                (int)(mouseEvent.getX() / (zoom * (gridSpacing + gx))),
-                (int)(mouseEvent.getY() / (zoom * (gridSpacing + gy))));
+                (int)(x / (zoom * (paddingX + gx))),
+                (int)(y / (zoom * (paddingY + gy))));
     }
 
     void calcSelectedSize(Vector2i a, Vector2i b) {
@@ -49,6 +64,15 @@ public class TilesetTab {
         final GraphicsContext gc = canvas.getGraphicsContext2D();
 
         gc.scale(zoom, zoom);
+
+        canvas.addEventHandler(MouseEvent.MOUSE_CLICKED,
+                mouseEvent -> {
+                    if (mouseEvent.getClickCount() == 2) {
+                        // double click, then edit the properties
+                        if (editor.selectedTileset != null)
+                            updateFromDialog(editor.selectedTileset);
+                    }
+                });
 
         canvas.addEventHandler(MouseEvent.MOUSE_MOVED,
                 mouseEvent -> {
@@ -70,7 +94,7 @@ public class TilesetTab {
         canvas.addEventHandler(MouseEvent.MOUSE_PRESSED,
                 mouseEvent -> {
                     dragStart = snappedPos(mouseEvent);
-                    dragEnd = dragStart;
+                    topLeft = dragEnd = dragStart;
                     calcSelectedSize(dragStart, dragEnd);
                 });
 
@@ -87,31 +111,36 @@ public class TilesetTab {
                 gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
                 if (editor.selectedTileset != null) {
-                    Image img = editor.selectedTileset.img;
+                    Tileset t = editor.selectedTileset;
+                    Image img = t.img;
                     pane.setPrefSize(img.getWidth() * zoom, img.getHeight() * zoom);
 
                     if (editor.showTilesetGrid) {
-                        double gx = editor.selectedTileset.tileSize.x;
-                        double gy = editor.selectedTileset.tileSize.y;
-                        int gridX = (int)(img.getWidth() / gx) + 1;
-                        int gridY = (int)(img.getHeight() / gy) + 1;
+                        double sizeX = t.tileSize.x;
+                        double sizeY = t.tileSize.y;
+                        int numTilesX = (int)(img.getWidth() / sizeX) + 1;
+                        int numTilesY = (int)(img.getHeight() / sizeY) + 1;
 
-                        canvas.setWidth((img.getWidth() + gridX * gridSpacing) * zoom);
-                        canvas.setHeight((img.getHeight() + gridY * gridSpacing) * zoom);
+                        canvas.setWidth((img.getWidth() + t.offset.x + numTilesX * t.padding.x) * zoom);
+                        canvas.setHeight((img.getHeight() + t.offset.y + numTilesY * t.padding.y) * zoom);
 
                         gc.setFill(Color.rgb(200, 200, 50, 0.5));
 
-                        for (int i = 0; i < gridY; ++i) {
-                            for (int j = 0; j < gridX; ++j) {
-                                double x = j * gx;
-                                double y = i * gy;
-                                double dx = j * (gx + gridSpacing);
-                                double dy = i * (gy + gridSpacing);
-                                gc.drawImage(img, x, y, gx, gy, dx, dy, gx, gy);
+                        // If the tileset itself doesn't contain any padding, use a default value
+                        int paddingX = Math.max(t.padding.x, 1);
+                        int paddingY = Math.max(t.padding.y, 1);
+
+                        for (int i = 0; i < numTilesY; ++i) {
+                            for (int j = 0; j < numTilesX; ++j) {
+                                double x = t.offset.x + j * (t.padding.x + sizeX);
+                                double y = t.offset.y + i * (t.padding.y + sizeY);
+                                double dx = t.offset.x + j * (sizeX + paddingX);
+                                double dy = t.offset.y + i * (sizeY + paddingY);
+                                gc.drawImage(img, x, y, sizeX, sizeY, dx, dy, sizeX, sizeY);
 
                                 // highlight the tile if it's inside the current brush
                                 if (j >= topLeft.x && i >= topLeft.y && j < topLeft.x + selectionSize.x && i < topLeft.y + selectionSize.y) {
-                                    gc.fillRect(dx, dy, gx, gy);
+                                    gc.fillRect(dx, dy, sizeX, sizeY);
                                 }
                             }
                         }
@@ -150,12 +179,12 @@ public class TilesetTab {
                 return;
 
             db.getFiles().stream().filter(file -> Utils.isValidImageFile(file.getName())).forEach(file -> {
-                // TODO: Add new tileset dialog
                 String path = file.getPath();
                 String filename = file.getName();
                 Tileset t = null;
                 try {
                     t = new Tileset(filename, path, new Vector2i(16, 16));
+                    updateFromDialog(t);
                     editor.tilesets.add(t);
                     editor.selectedTileset = t;
                 } catch (FileNotFoundException e) {
@@ -165,4 +194,50 @@ public class TilesetTab {
         });
 
     }
+
+    void updateFromDialog(Tileset t) {
+        try {
+            URL url = getClass().getResource("/NewTileset.fxml");
+            Parent root = FXMLLoader.load(url);
+
+            BoundPropertySet props = new BoundPropertySet(root, "name",
+                    "tileWidth", "tileHeight", "offsetX", "offsetY", "paddingX", "paddingY");
+
+            props.setStringValue("name", t.name);
+            props.setIntValue("tileWidth", t.tileSize.x);
+            props.setIntValue("tileHeight", t.tileSize.y);
+            props.setIntValue("offsetX", t.offset.x);
+            props.setIntValue("offsetY", t.offset.y);
+            props.setIntValue("paddingX", t.padding.x);
+            props.setIntValue("paddingY", t.padding.y);
+
+            Scene scene = new Scene(root, 400, 300);
+            Stage stage = new Stage();
+
+            Button btnOk = (Button)root.lookup("#ok");
+            btnOk.setOnAction(event -> {
+                stage.close();
+                t.tileSize.x = props.getIntValue("tileWidth", 16);
+                t.tileSize.y = props.getIntValue("tileHeight", 16);
+                t.offset.x = props.getIntValue("offsetX", 0);
+                t.offset.y = props.getIntValue("offsetY", 0);
+                t.padding.x = props.getIntValue("paddingX", 0);
+                t.padding.y = props.getIntValue("paddingY", 0);
+            });
+
+            Button btnCancel = (Button)root.lookup("#cancel");
+            btnCancel.setOnAction(event -> {
+                stage.close();
+            });
+
+            stage.setTitle("Edit tileset");
+            stage.setScene(scene);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.show();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 }

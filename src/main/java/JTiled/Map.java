@@ -16,6 +16,9 @@ import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 public class Map {
 
@@ -30,33 +33,41 @@ public class Map {
         this.tileSize = tileSize;
     }
 
+    @FunctionalInterface
     interface MapDoneCallback {
         void onResult(Map map);
+    }
+
+    static boolean isLessRestrictive(TileFlag a, TileFlag b) {
+        switch (a) {
+            case None:
+                return false;
+            case TopLeft:
+                return b == TileFlag.TopMiddle || b == TileFlag.MiddleLeft || b == TileFlag.Middle || b == TileFlag.MiddleRight || b == TileFlag.BottomMiddle;
+            case TopMiddle:
+                return b == TileFlag.Middle;
+            case TopRight:
+                return b == TileFlag.TopMiddle || b == TileFlag.MiddleLeft || b == TileFlag.Middle || b == TileFlag.MiddleRight || b == TileFlag.BottomMiddle;
+            case MiddleLeft:
+                return b == TileFlag.Middle;
+            case Middle:
+                return false;
+            case MiddleRight:
+                return b == TileFlag.Middle;
+            case BottomRight:
+                return b == TileFlag.TopMiddle || b == TileFlag.MiddleLeft || b == TileFlag.Middle || b == TileFlag.MiddleRight || b == TileFlag.BottomMiddle;
+            case BottomMiddle:
+                return b == TileFlag.Middle;
+            case BottomLeft:
+                return b == TileFlag.TopMiddle || b == TileFlag.MiddleLeft || b == TileFlag.Middle || b == TileFlag.MiddleRight || b == TileFlag.BottomMiddle;
+        }
+        return false;
     }
 
     static void buildFromDialog(URL url, MapDoneCallback cb) {
         try {
             Parent root = FXMLLoader.load(url);
-            TextField nameField = (TextField)root.lookup("#name");
-            TextField mapWidthField = (TextField)root.lookup("#mapWidth");
-            TextField mapHeightField = (TextField)root.lookup("#mapHeight");
-            TextField tileWidthField = (TextField)root.lookup("#tileWidth");
-            TextField tileHeightField = (TextField)root.lookup("#tileHeight");
-
-            StringProperty name = new SimpleStringProperty();
-            name.bind(nameField.textProperty());
-
-            StringProperty mapWidth = new SimpleStringProperty();
-            mapWidth.bind(mapWidthField.textProperty());
-
-            StringProperty mapHeight = new SimpleStringProperty();
-            mapHeight.bind(mapHeightField.textProperty());
-
-            StringProperty tileWidth = new SimpleStringProperty();
-            tileWidth.bind(tileWidthField.textProperty());
-
-            StringProperty tileHeight = new SimpleStringProperty();
-            tileHeight.bind(tileHeightField.textProperty());
+            BoundPropertySet props = new BoundPropertySet(root, "name", "mapWidth", "mapHeight", "tileWidth", "tileHeight");
 
             Scene scene = new Scene(root, 400, 300);
             Stage stage = new Stage();
@@ -64,9 +75,9 @@ public class Map {
             Button btnOk = (Button)root.lookup("#ok");
             btnOk.setOnAction(event -> {
                 stage.close();
-                cb.onResult(new Map(name.getValue(),
-                        new Vector2i(Integer.parseInt(mapWidth.getValue()), Integer.parseInt(mapHeight.getValue())),
-                        new Vector2i(Integer.parseInt(tileWidth.getValue()), Integer.parseInt(tileHeight.getValue()))));
+                cb.onResult(new Map(props.getValue("name"),
+                        new Vector2i(Integer.parseInt(props.getValue("mapWidth")), Integer.parseInt(props.getValue("mapHeight"))),
+                        new Vector2i(Integer.parseInt(props.getValue("tileWidth")), Integer.parseInt(props.getValue("tileHeight")))));
             });
 
             Button btnCancel = (Button)root.lookup("#cancel");
@@ -101,18 +112,52 @@ public class Map {
         }
     }
 
+
     void ApplyBrush(Brush brush, Vector2i pos) {
+
+        // save any new tiles that we need to recalculate the type for
+        List<Vector2i> boundary = new ArrayList<>();
+        HashMap<Integer, Tile> brushTiles = new HashMap<>();
+
         for (int i = 0; i < brush.size.y; ++i) {
             for (int j = 0; j < brush.size.x; ++j) {
 
                 int x = pos.x + j;
                 int y = pos.y + i;
 
+                Tile t = curLayer.tiles[x][y];
+                Tile b = brush.tiles[j][i];
+                brushTiles.put(b.wallFlags, b);
+
                 if (x < 0 || x >= size.x || y < 0 || y >= size.y)
                     continue;
 
-                curLayer.tiles[x][y] = brush.tiles[j][i];
+
+                if (t == null || t.terrian != b.terrian) {
+                    curLayer.tiles[x][y] = b;
+                } else {
+                    // temporarily overwrite with the brush tile. this is done just so the new tile will have
+                    // the correct terrain, because we use the terrain to determine which walls are needed
+                    curLayer.tiles[x][y] = b;
+                    boundary.add(new Vector2i(x, y));
+                }
             }
+        }
+
+        int terrain = brush.tiles[0][0].terrian;
+        for (Vector2i b : boundary) {
+            // look at the four neighbouring tiles, and determine which walls are needed
+            int flags = 0;
+            if (!curLayer.sameTerrain(b, -1, +0, terrain))
+                flags |= WallFlag.Left;
+            if (!curLayer.sameTerrain(b, +0, -1, terrain))
+                flags |= WallFlag.Top;
+            if (!curLayer.sameTerrain(b, +1, +0, terrain))
+                flags |= WallFlag.Right;
+            if (!curLayer.sameTerrain(b, +0, +1, terrain))
+                flags |= WallFlag.Bottom;
+
+            curLayer.tiles[b.x][b.y] = brushTiles.get(flags);
         }
     }
 

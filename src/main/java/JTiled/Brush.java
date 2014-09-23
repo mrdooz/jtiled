@@ -17,9 +17,9 @@ public class Brush
         this.tileSize = tileset.tileSize;
         tiles = new Tile[size.x][size.y];
 
-        for (int i = 0; i < size.y; ++i) {
-            for (int j = 0; j < size.x; ++j) {
-                tiles[j][i] = new Tile(new Vector2i(pos.x + j, pos.y + i), tileset);
+        for (int y = 0; y < size.y; ++y) {
+            for (int x = 0; x < size.x; ++x) {
+                tiles[x][y] = tileset.tiles[x][y];
             }
         }
     }

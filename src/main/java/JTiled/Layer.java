@@ -30,6 +30,19 @@ public class Layer {
         }
     }
 
+    Tile getTile(Vector2i v) {
+        return tiles[v.x][v.y];
+    }
+
+    boolean sameTerrain(Vector2i v, int ofsX, int ofsY, int terrain) {
+        int ox = v.x + ofsX;
+        int oy = v.y + ofsY;
+        if (ox < 0 || ox > map.size.x || oy < 0 || oy > map.size.y || tiles[ox][oy] == null)
+            return false;
+
+        return tiles[ox][oy].terrian == terrain;
+    }
+
     Tile[][] tiles;
 
     @Override
