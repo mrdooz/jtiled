@@ -7,6 +7,7 @@ public class Layer {
     String name;
     Map map;
     boolean visible;
+    Tile[][] tiles;
 
     Layer(String name, Map map) {
         this.name = name;
@@ -43,7 +44,6 @@ public class Layer {
         return tiles[ox][oy].terrian == terrain;
     }
 
-    Tile[][] tiles;
 
     @Override
     public String toString() {

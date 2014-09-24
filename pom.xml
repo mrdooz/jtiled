@@ -7,6 +7,15 @@
     <groupId>JTiled</groupId>
     <artifactId>JTiled</artifactId>
     <version>1.0-SNAPSHOT</version>
+  <dependencies>
+
+<dependency>
+	<groupId>com.thoughtworks.xstream</groupId>
+	<artifactId>xstream</artifactId>
+	<version>1.4.7</version>
+</dependency>
+  </dependencies>
+
 
 
 </project>

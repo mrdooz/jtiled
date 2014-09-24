@@ -1,5 +1,6 @@
 package JTiled;
 
+import com.thoughtworks.xstream.annotations.XStreamOmitField;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
@@ -135,5 +136,6 @@ public class Map {
     }
 
     Layer curLayer;
+    @XStreamOmitField
     ObservableList<Layer> layers = FXCollections.observableArrayList();
 }

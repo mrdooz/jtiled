@@ -9,8 +9,6 @@ public class Tile {
     int terrian;
     int wallFlags;
 
-    TileFlag flag = TileFlag.None;
-
     Tile(Vector2i pos, Tileset tileset) {
         this.pos = pos;
         this.tileset = tileset;

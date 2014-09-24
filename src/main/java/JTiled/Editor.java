@@ -4,6 +4,8 @@ package JTiled;
 
 import com.sun.org.apache.xml.internal.serialize.OutputFormat;
 import com.sun.org.apache.xml.internal.serialize.XMLSerializer;
+import com.thoughtworks.xstream.XStream;
+import com.thoughtworks.xstream.io.xml.DomDriver;
 import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -27,6 +29,7 @@ import java.io.FileOutputStream;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.SynchronousQueue;
 
 public class Editor extends Application {
 
@@ -90,6 +93,11 @@ public class Editor extends Application {
 
         if (selectedMap == null)
             return;
+
+        XStream xstream = new XStream(new DomDriver());
+        xstream.processAnnotations(Map.class);
+        String xml = xstream.toXML(selectedMap);
+        System.out.println(xml);
 
         DocumentBuilderFactory icFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder icBuilder;

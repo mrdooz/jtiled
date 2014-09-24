@@ -1,10 +1,12 @@
 package JTiled;
 
+import com.thoughtworks.xstream.annotations.XStreamOmitField;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.util.HashMap;
 
 public class Tileset {
 
@@ -13,14 +15,24 @@ public class Tileset {
     Vector2i tileSize;
     Vector2i offset;
     Vector2i padding;
+    @XStreamOmitField
     Image img;
     Vector2i numTiles;
     Tile tiles[][];
 
     int gidStart;   // used for serialization
 
+    @XStreamOmitField
+    HashMap<Integer, Tile> tilesByFlag = new HashMap<>();
+
     Tileset(String name, String path, Vector2i tileSize) throws FileNotFoundException {
         this(name, path, tileSize, new Vector2i(0,0), new Vector2i(0, 0));
+    }
+
+    void setTerrain(int x, int y, int terrain, int flags) {
+        tiles[x][y].terrian = terrain;
+        tiles[x][y].wallFlags = flags;
+        tilesByFlag.put(flags, tiles[x][y]);
     }
 
     public Tileset(String name, String path, Vector2i tileSize, Vector2i offset, Vector2i padding) throws FileNotFoundException {
@@ -44,32 +56,28 @@ public class Tileset {
         for (int y = 0; y < numTiles.y; ++y) {
             for (int x = 0; x < numTiles.x; ++x) {
                 Tile t = new Tile(new Vector2i(x, y), this);
-                t.terrian = 1;
+                t.terrian = 0;
                 t.size = tileSize;
                 tiles[x][y] = t;
             }
         }
 
         // hack hack!
-        tiles[0][0].flag = TileFlag.TopLeft;
-        tiles[0][0].wallFlags = WallFlag.Left | WallFlag.Top;
-        tiles[1][0].flag = TileFlag.TopMiddle;
-        tiles[1][0].wallFlags = WallFlag.Top;
-        tiles[2][0].flag = TileFlag.TopRight;
-        tiles[2][0].wallFlags = WallFlag.Right | WallFlag.Top;
+        setTerrain(0, 0, 1, WallFlag.Right | WallFlag.Bottom);
+        setTerrain(1, 0, 1, WallFlag.Left | WallFlag.Bottom | WallFlag.Right);
+        setTerrain(2, 0, 1, WallFlag.Left | WallFlag.Bottom);
 
-        tiles[0][1].flag = TileFlag.MiddleLeft;
-        tiles[0][1].wallFlags = WallFlag.Left;
-        tiles[1][1].flag = TileFlag.Middle;
-        tiles[1][1].wallFlags = 0;
-        tiles[2][1].flag = TileFlag.MiddleRight;
-        tiles[2][1].wallFlags = WallFlag.Right;
+        setTerrain(0, 1, 1, WallFlag.Top | WallFlag.Right | WallFlag.Bottom);
+        setTerrain(1, 1, 1, WallFlag.Top | WallFlag.Right | WallFlag.Left | WallFlag.Bottom);
+        setTerrain(2, 1, 1, WallFlag.Left | WallFlag.Top | WallFlag.Bottom);
 
-        tiles[0][2].flag = TileFlag.BottomLeft;
-        tiles[0][2].wallFlags = WallFlag.Left | WallFlag.Bottom;
-        tiles[1][2].flag = TileFlag.BottomMiddle;
-        tiles[1][2].wallFlags = WallFlag.Bottom;
-        tiles[2][2].flag = TileFlag.BottomRight;
-        tiles[2][2].wallFlags = WallFlag.Right | WallFlag.Bottom;
+        setTerrain(0, 2, 1, WallFlag.Right | WallFlag.Top);
+        setTerrain(1, 2, 1, WallFlag.Left | WallFlag.Top | WallFlag.Right);
+        setTerrain(2, 2, 1, WallFlag.Left | WallFlag.Top);
+
+        setTerrain(3, 3, 1, WallFlag.Left | WallFlag.Top);
+        setTerrain(4, 3, 1, WallFlag.Right | WallFlag.Top);
+        setTerrain(3, 4, 1, WallFlag.Left | WallFlag.Bottom);
+        setTerrain(4, 4, 1, WallFlag.Right | WallFlag.Bottom);
     }
 }
