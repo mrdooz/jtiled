@@ -20,6 +20,8 @@ import javafx.stage.Stage;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import java.beans.XMLEncoder;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.net.URL;
@@ -51,7 +53,7 @@ public class Editor extends Application {
         HBox menuBox = new HBox(8);
         menuBox.getChildren().addAll(new Button("Cut"), new Button("Copy"), new Button("Paste"));
         VBox vbox = new VBox(layersListView, menuBox);
-        vbox.setMargin(menuBox, new Insets(8, 8, 8, 8));
+        VBox.setMargin(menuBox, new Insets(8, 8, 8, 8));
         VBox.setVgrow(layersListView, Priority.ALWAYS);
 
         tab.setContent(vbox);
@@ -209,8 +211,7 @@ public class Editor extends Application {
         mapPane.getSelectionModel().selectedItemProperty().addListener(
                 (observableValue, oldTab, newTab) -> {
                     // find the map associated with the new tab
-                    Map m = tabToMap.get(newTab);
-                    selectedMap = m;
+                    selectedMap = tabToMap.get(newTab);
                 }
         );
 

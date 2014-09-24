@@ -11,7 +11,6 @@ public class Brush
 
     Brush(Vector2i pos, Vector2i size, Tileset tileset) {
         // create a brush from a quad in the given tileset
-
         this.size = size;
         this.tileset = tileset;
         this.tileSize = tileset.tileSize;
@@ -19,7 +18,7 @@ public class Brush
 
         for (int y = 0; y < size.y; ++y) {
             for (int x = 0; x < size.x; ++x) {
-                tiles[x][y] = tileset.tiles[x][y];
+                tiles[x][y] = tileset.tiles[x+pos.x][y+pos.y];
             }
         }
     }

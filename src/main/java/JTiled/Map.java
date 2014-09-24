@@ -38,32 +38,6 @@ public class Map {
         void onResult(Map map);
     }
 
-    static boolean isLessRestrictive(TileFlag a, TileFlag b) {
-        switch (a) {
-            case None:
-                return false;
-            case TopLeft:
-                return b == TileFlag.TopMiddle || b == TileFlag.MiddleLeft || b == TileFlag.Middle || b == TileFlag.MiddleRight || b == TileFlag.BottomMiddle;
-            case TopMiddle:
-                return b == TileFlag.Middle;
-            case TopRight:
-                return b == TileFlag.TopMiddle || b == TileFlag.MiddleLeft || b == TileFlag.Middle || b == TileFlag.MiddleRight || b == TileFlag.BottomMiddle;
-            case MiddleLeft:
-                return b == TileFlag.Middle;
-            case Middle:
-                return false;
-            case MiddleRight:
-                return b == TileFlag.Middle;
-            case BottomRight:
-                return b == TileFlag.TopMiddle || b == TileFlag.MiddleLeft || b == TileFlag.Middle || b == TileFlag.MiddleRight || b == TileFlag.BottomMiddle;
-            case BottomMiddle:
-                return b == TileFlag.Middle;
-            case BottomLeft:
-                return b == TileFlag.TopMiddle || b == TileFlag.MiddleLeft || b == TileFlag.Middle || b == TileFlag.MiddleRight || b == TileFlag.BottomMiddle;
-        }
-        return false;
-    }
-
     static void buildFromDialog(URL url, MapDoneCallback cb) {
         try {
             Parent root = FXMLLoader.load(url);
@@ -111,7 +85,6 @@ public class Map {
             }
         }
     }
-
 
     void ApplyBrush(Brush brush, Vector2i pos) {
 
