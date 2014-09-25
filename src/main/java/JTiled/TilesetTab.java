@@ -185,7 +185,7 @@ public class TilesetTab {
                 try {
                     t = new Tileset(filename, path, new Vector2i(16, 16));
                     updateFromDialog(t);
-                    editor.tilesets.add(t);
+//                    editor.tilesets.add(t);
                     editor.selectedTileset = t;
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();

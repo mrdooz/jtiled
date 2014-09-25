@@ -1,5 +1,8 @@
 package JTiled;
 
+import com.thoughtworks.xstream.annotations.XStreamAlias;
+import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
+import com.thoughtworks.xstream.annotations.XStreamImplicit;
 import com.thoughtworks.xstream.annotations.XStreamOmitField;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
@@ -21,12 +24,21 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+@XStreamAlias("map")
 public class Map {
 
+    @XStreamAsAttribute
     String name;
+
     // size is in tiles, not pixels
     Vector2i size;
     Vector2i tileSize;
+
+    @XStreamOmitField
+    Layer curLayer;
+
+    @XStreamImplicit(itemFieldName="layers")
+    List<Layer> layers = new ArrayList<>();
 
     public Map(String name, Vector2i size, Vector2i tileSize) {
         this.name = name;
@@ -51,8 +63,8 @@ public class Map {
             btnOk.setOnAction(event -> {
                 stage.close();
                 cb.onResult(new Map(props.getValue("name"),
-                        new Vector2i(Integer.parseInt(props.getValue("mapWidth")), Integer.parseInt(props.getValue("mapHeight"))),
-                        new Vector2i(Integer.parseInt(props.getValue("tileWidth")), Integer.parseInt(props.getValue("tileHeight")))));
+                        new Vector2i(props.getIntValue("mapWidth", 0), props.getIntValue("mapHeight", 0)),
+                        new Vector2i(props.getIntValue("tileWidth", 0), props.getIntValue("tileHeight", 0))));
             });
 
             Button btnCancel = (Button)root.lookup("#cancel");
@@ -99,7 +111,7 @@ public class Map {
                 int x = pos.x + j;
                 int y = pos.y + i;
 
-                Tile t = curLayer.tiles[x][y];
+                Tile t = Tile.findByRef(curLayer.tiles[x][y]);
                 Tile b = brush.tiles[j][i];
                 brushTiles.put(b.wallFlags, b);
 
@@ -108,11 +120,13 @@ public class Map {
 
 
                 if (t == null || t.terrian != b.terrian) {
-                    curLayer.tiles[x][y] = b;
+                    // FIXME:
+//                    curLayer.tiles[x][y] = b;
                 } else {
                     // temporarily overwrite with the brush tile. this is done just so the new tile will have
                     // the correct terrain, because we use the terrain to determine which walls are needed
-                    curLayer.tiles[x][y] = b;
+                    // FIXME
+//                    curLayer.tiles[x][y] = b;
                     boundary.add(new Vector2i(x, y));
                 }
             }
@@ -131,11 +145,8 @@ public class Map {
             if (!curLayer.sameTerrain(b, +0, +1, terrain))
                 flags |= WallFlag.Bottom;
 
-            curLayer.tiles[b.x][b.y] = brushTiles.get(flags);
+            // FIXME
+//            curLayer.tiles[b.x][b.y] = brushTiles.get(flags);
         }
     }
-
-    Layer curLayer;
-    @XStreamOmitField
-    ObservableList<Layer> layers = FXCollections.observableArrayList();
 }

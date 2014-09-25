@@ -33,7 +33,9 @@ import java.util.concurrent.SynchronousQueue;
 
 public class Editor extends Application {
 
-    ObservableList<Tileset> tilesets = FXCollections.observableArrayList();
+    public static Editor instance;
+
+//    ObservableList<Tileset> tilesets = FXCollections.observableArrayList();
     List<Map> maps = new ArrayList<>();
 
     Map selectedMap;
@@ -47,11 +49,25 @@ public class Editor extends Application {
 
     TabPane mapPane = new TabPane();
 
+    HashMap<Integer, Tileset> tilesets = new HashMap<>();
+    int nextTilesetId = 1;
+
+    public Editor() {
+        instance = this;
+    }
+
+    int addTileset(Tileset tileset) {
+        int id = nextTilesetId++;
+        tilesets.put(id, tileset);
+        return id;
+    }
+
     Tab createLayersTab() {
         Tab tab = new Tab("Layers");
 
-        // TODO: this is pretty horrible :)
-        ListView<Layer> layersListView = new ListView<>(selectedMap.layers);
+        ListView<Layer> layersListView = new ListView<>();
+        for (Layer x : selectedMap.layers)
+            layersListView.getItems().add(x);
 
         HBox menuBox = new HBox(8);
         menuBox.getChildren().addAll(new Button("Cut"), new Button("Copy"), new Button("Paste"));
@@ -120,9 +136,8 @@ public class Editor extends Application {
 
             // add the tilesets
             int gid = 1;
-            for (Tileset tileset : tilesets) {
+            for (Tileset tileset : tilesets.values()) {
                 org.w3c.dom.Element t = doc.createElement("tileset");
-                tileset.gidStart = gid;
                 t.setAttribute("firstgid", String.valueOf(gid));
                 t.setAttribute("name", tileset.name);
                 t.setAttribute("tilewidth", String.valueOf(tw));
@@ -155,8 +170,9 @@ public class Editor extends Application {
                 for (int y = 0; y < selectedMap.size.y; ++y) {
                     for (int x = 0; x < selectedMap.size.x; ++x) {
                         org.w3c.dom.Element t = doc.createElement("tile");
-                        Tile tile = layer.tiles[x][y];
-                        int id = tile != null ? 1 + tile.pos.y * tile.tileset.numTiles.x + tile.pos.x : 0;
+                        Tile tile = Tile.findByRef(layer.tiles[x][y]);
+                        Tileset tileset = tilesets.get(tile.tilesetId);
+                        int id = tile != null ? 1 + tile.pos.y * tileset.numTiles.x + tile.pos.x : 0;
                         t.setAttribute("gid", String.valueOf(id));
                         data.appendChild(t);
                     }
@@ -253,7 +269,7 @@ public class Editor extends Application {
         if (true) {
             Tileset t = new Tileset("test", "/Users/dooz/tmp/tmw_desert_spacing.png", new Vector2i(32, 32));
 //            Tileset t = new Tileset("test", "/Users/dooz/tmp/dungeon_sheet_0.png", new Vector2i(16, 16));
-            tilesets.add(t);
+//            tilesets.add(t);
             selectedTileset = t;
         }
     }

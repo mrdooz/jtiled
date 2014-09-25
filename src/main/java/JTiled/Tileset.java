@@ -1,5 +1,6 @@
 package JTiled;
 
+import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamOmitField;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
@@ -12,15 +13,19 @@ public class Tileset {
 
     String name;
     String path;
+    @XStreamAlias("size")
     Vector2i tileSize;
+    @XStreamAlias("offset")
     Vector2i offset;
+    @XStreamAlias("padding")
     Vector2i padding;
     @XStreamOmitField
     Image img;
     Vector2i numTiles;
     Tile tiles[][];
 
-    int gidStart;   // used for serialization
+    @XStreamAlias("id")
+    int id;
 
     @XStreamOmitField
     HashMap<Integer, Tile> tilesByFlag = new HashMap<>();
@@ -41,6 +46,7 @@ public class Tileset {
         this.tileSize = tileSize;
         this.offset = offset;
         this.padding = padding;
+        this.id = Editor.instance.addTileset(this);
 
         this.name = name;
         this.path = path;
@@ -55,9 +61,8 @@ public class Tileset {
 
         for (int y = 0; y < numTiles.y; ++y) {
             for (int x = 0; x < numTiles.x; ++x) {
-                Tile t = new Tile(new Vector2i(x, y), this);
+                Tile t = new Tile(new Vector2i(x, y), id);
                 t.terrian = 0;
-                t.size = tileSize;
                 tiles[x][y] = t;
             }
         }
