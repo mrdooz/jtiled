@@ -7,10 +7,6 @@ import com.sun.org.apache.xml.internal.serialize.XMLSerializer;
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.DomDriver;
 import javafx.application.Application;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.Group;
@@ -22,14 +18,12 @@ import javafx.stage.Stage;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import java.beans.XMLEncoder;
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.net.URL;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.SynchronousQueue;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.List;
 
 public class Editor extends Application {
 
@@ -51,6 +45,9 @@ public class Editor extends Application {
 
     HashMap<Integer, Tileset> tilesets = new HashMap<>();
     int nextTilesetId = 1;
+
+    PaintMode paintMode = PaintMode.Terrain;
+    int curTerrain = 1;
 
     public Editor() {
         instance = this;
@@ -267,7 +264,8 @@ public class Editor extends Application {
         primaryStage.show();
 
         if (true) {
-            Tileset t = new Tileset("test", "/Users/dooz/tmp/tmw_desert_spacing.png", new Vector2i(32, 32));
+            Tileset t = new Tileset("test", "/Users/dooz/tmp/tmw_desert_spacing.png",
+                    new Vector2i(32, 32), new Vector2i(1, 1), new Vector2i(1, 1));
 //            Tileset t = new Tileset("test", "/Users/dooz/tmp/dungeon_sheet_0.png", new Vector2i(16, 16));
 //            tilesets.add(t);
             selectedTileset = t;

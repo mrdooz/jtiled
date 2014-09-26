@@ -6,6 +6,7 @@ class WallFlag {
     static int Top      = 1 << 1;
     static int Right    = 1 << 2;
     static int Bottom   = 1 << 3;
+    // a tile is inner if it's surrounded by tiles of the same terrain
     static int Inner    = 1 << 7;
 }
 

@@ -7,23 +7,13 @@ import javafx.scene.canvas.GraphicsContext;
 @XStreamAlias("tile")
 public class Tile {
 
-    class Ref {
-        int tilesetId;
-        int tileId;
-
-        Ref(int tilesetId, int tileId) {
-            this.tilesetId = tilesetId;
-            this.tileId = tileId;
-        }
-    }
-
-    static Tile findByRef(Ref ref) {
+    static Tile findByRef(TileRef ref) {
         if (ref == null)
             return null;
 
         Tileset tileset = Editor.instance.tilesets.get(ref.tilesetId);
-        int x = tileset.id % tileset.numTiles.x;
-        int y = tileset.id / tileset.numTiles.x;
+        int x = ref.tileId % tileset.numTiles.x;
+        int y = ref.tileId / tileset.numTiles.x;
         return tileset.tiles[x][y];
     }
 

@@ -20,9 +20,7 @@ import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 @XStreamAlias("map")
 public class Map {
@@ -39,6 +37,12 @@ public class Map {
 
     @XStreamImplicit(itemFieldName="layers")
     List<Layer> layers = new ArrayList<>();
+
+    // Save the previous brush & pos to avoid redundant map updates
+    @XStreamOmitField
+    Brush prevBrush;
+    @XStreamOmitField
+    Vector2i prevPos;
 
     public Map(String name, Vector2i size, Vector2i tileSize) {
         this.name = name;
@@ -99,54 +103,89 @@ public class Map {
         }
     }
 
-    void ApplyBrush(Brush brush, Vector2i pos) {
-
-        // save any new tiles that we need to recalculate the type for
-        List<Vector2i> boundary = new ArrayList<>();
-        HashMap<Integer, Tile> brushTiles = new HashMap<>();
+    private void ApplyTileBrush(Brush brush, Vector2i pos) {
 
         for (int i = 0; i < brush.size.y; ++i) {
             for (int j = 0; j < brush.size.x; ++j) {
 
                 int x = pos.x + j;
                 int y = pos.y + i;
-
-                Tile t = Tile.findByRef(curLayer.tiles[x][y]);
-                Tile b = brush.tiles[j][i];
-                brushTiles.put(b.wallFlags, b);
-
                 if (x < 0 || x >= size.x || y < 0 || y >= size.y)
                     continue;
 
+                Tile b = brush.tiles[j][i];
+                curLayer.tiles[x][y] = TileRef.valueOf(b);
+            }
+        }
+    }
 
-                if (t == null || t.terrian != b.terrian) {
-                    // FIXME:
-//                    curLayer.tiles[x][y] = b;
-                } else {
-                    // temporarily overwrite with the brush tile. this is done just so the new tile will have
-                    // the correct terrain, because we use the terrain to determine which walls are needed
-                    // FIXME
-//                    curLayer.tiles[x][y] = b;
-                    boundary.add(new Vector2i(x, y));
+    private void ApplyTerrainBrush(Brush brush, Vector2i pos) {
+
+        System.out.println("\npos: " + pos);
+
+        // In terrain mode, collect all the adjacent tiles that share the same terrain,
+        // and then apply edge rules to determine which tile should be used
+        List<Vector2i> flood = new ArrayList<>();
+        boolean visited[][] = new boolean[curLayer.map.size.x][curLayer.map.size.y];
+
+        Queue<Vector2i> frontier = new LinkedList<>();
+        frontier.add(pos);
+        visited[pos.x][pos.y] = true;
+
+        int terrain = Editor.instance.curTerrain;
+
+        Vector2i[] ofs = new Vector2i[] {
+                new Vector2i(-1, +0), new Vector2i(+1, +0), new Vector2i(+0, -1), new Vector2i(+0, +1) };
+
+        while (!frontier.isEmpty()) {
+
+            // pop the front, and add the unvisited neighbours that share the same terrain
+            Vector2i f = frontier.poll();
+            flood.add(f);
+
+            for (Vector2i x : ofs) {
+                Vector2i p = f.add(x);
+                Tile t = Tile.findByRef(curLayer.getTile(p));
+                if (t != null && !visited[p.x][p.y] && t.terrian == terrain ) {
+                    frontier.add(p);
+                    visited[p.x][p.y] = true;
                 }
             }
         }
 
-        int terrain = brush.tiles[0][0].terrian;
-        for (Vector2i b : boundary) {
+        for (Vector2i b : flood) {
             // look at the four neighbouring tiles, and determine which walls are needed
             int flags = 0;
-            if (!curLayer.sameTerrain(b, -1, +0, terrain))
+            if (curLayer.sameTerrain(b, -1, +0, terrain))
                 flags |= WallFlag.Left;
-            if (!curLayer.sameTerrain(b, +0, -1, terrain))
+            if (curLayer.sameTerrain(b, +0, -1, terrain))
                 flags |= WallFlag.Top;
-            if (!curLayer.sameTerrain(b, +1, +0, terrain))
+            if (curLayer.sameTerrain(b, +1, +0, terrain))
                 flags |= WallFlag.Right;
-            if (!curLayer.sameTerrain(b, +0, +1, terrain))
+            if (curLayer.sameTerrain(b, +0, +1, terrain))
                 flags |= WallFlag.Bottom;
 
-            // FIXME
-//            curLayer.tiles[b.x][b.y] = brushTiles.get(flags);
+            TileRef r = brush.tileset.tilesByFlag.get(flags);
+            if (r == null) {
+                int a = 10;
+            }
+
+            curLayer.tiles[b.x][b.y] = r != null ? r : TileRef.valueOf(brush.tiles[0][0]); //  brush.tileset.tilesByFlag.get(flags);
+        }
+    }
+
+    void ApplyBrush(Brush brush, Vector2i pos) {
+
+        if (brush == prevBrush && pos == prevPos)
+            return;
+
+        prevBrush = brush;
+        prevPos = pos;
+
+        if (Editor.instance.paintMode == PaintMode.Terrain) {
+            ApplyTerrainBrush(brush, pos);
+        } else {
+            ApplyTileBrush(brush, pos);
         }
     }
 }

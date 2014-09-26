@@ -25,11 +25,11 @@ public class TilesetTab {
 
     Editor editor;
     ScrollPane pane;
-    Vector2i mousePos = new Vector2i(0,0);
-    Vector2i dragStart = new Vector2i(0,0);
-    Vector2i topLeft = new Vector2i(0, 0);
-    Vector2i dragEnd = new Vector2i(0,0);
-    Vector2i selectionSize = new Vector2i(1,1);
+    Vector2i mousePos = Vector2i.ZERO;
+    Vector2i dragStart = Vector2i.ZERO;
+    Vector2i topLeft = Vector2i.ZERO;
+    Vector2i dragEnd = Vector2i.ZERO;
+    Vector2i selectionSize = Vector2i.ONE;
 
     double zoom = 2;
 
@@ -183,7 +183,7 @@ public class TilesetTab {
                 String filename = file.getName();
                 Tileset t = null;
                 try {
-                    t = new Tileset(filename, path, new Vector2i(16, 16));
+                    t = new Tileset(filename, path, new Vector2i(16, 16), Vector2i.ZERO, Vector2i.ZERO);
                     updateFromDialog(t);
 //                    editor.tilesets.add(t);
                     editor.selectedTileset = t;

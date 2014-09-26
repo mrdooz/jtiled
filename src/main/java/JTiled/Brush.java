@@ -27,15 +27,23 @@ public class Brush
         if (tileset == null)
             return;
 
-        double ofsY = 0;
-        for (int i = 0; i < size.y; ++i) {
-            double ofsX = 0;
-            for (int j = 0; j < size.x; ++j) {
-                Tile tile = tiles[j][i];
-                tile.Draw(gc, destX + ofsX, destY + ofsY);
-                ofsX += tileSize.x;
+        if (Editor.instance.paintMode == PaintMode.Terrain) {
+            // draw the brush for terrain painting
+            Tile tile = tiles[0][0];
+            tile.Draw(gc, destX, destY);
+
+        } else {
+            // draw the brush for tile painting
+            double ofsY = 0;
+            for (int i = 0; i < size.y; ++i) {
+                double ofsX = 0;
+                for (int j = 0; j < size.x; ++j) {
+                    Tile tile = tiles[j][i];
+                    tile.Draw(gc, destX + ofsX, destY + ofsY);
+                    ofsX += tileSize.x;
+                }
+                ofsY += tileSize.y;
             }
-            ofsY += tileSize.y;
         }
     }
 }

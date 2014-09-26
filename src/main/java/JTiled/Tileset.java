@@ -27,17 +27,16 @@ public class Tileset {
     @XStreamAlias("id")
     int id;
 
-    @XStreamOmitField
-    HashMap<Integer, Tile> tilesByFlag = new HashMap<>();
+    HashMap<Integer, TileRef> tilesByFlag = new HashMap<>();
 
-    Tileset(String name, String path, Vector2i tileSize) throws FileNotFoundException {
-        this(name, path, tileSize, new Vector2i(0,0), new Vector2i(0, 0));
+    static Tileset findByRef(int id) {
+        return Editor.instance.tilesets.get(id);
     }
 
     void setTerrain(int x, int y, int terrain, int flags) {
         tiles[x][y].terrian = terrain;
         tiles[x][y].wallFlags = flags;
-        tilesByFlag.put(flags, tiles[x][y]);
+        tilesByFlag.put(flags, TileRef.valueOf(tiles[x][y]));
     }
 
     public Tileset(String name, String path, Vector2i tileSize, Vector2i offset, Vector2i padding) throws FileNotFoundException {
@@ -74,15 +73,17 @@ public class Tileset {
 
         setTerrain(0, 1, 1, WallFlag.Top | WallFlag.Right | WallFlag.Bottom);
         setTerrain(1, 1, 1, WallFlag.Top | WallFlag.Right | WallFlag.Left | WallFlag.Bottom);
+        tilesByFlag.put(0, TileRef.valueOf(tiles[1][1]));
+
         setTerrain(2, 1, 1, WallFlag.Left | WallFlag.Top | WallFlag.Bottom);
 
         setTerrain(0, 2, 1, WallFlag.Right | WallFlag.Top);
         setTerrain(1, 2, 1, WallFlag.Left | WallFlag.Top | WallFlag.Right);
         setTerrain(2, 2, 1, WallFlag.Left | WallFlag.Top);
 
-        setTerrain(3, 3, 1, WallFlag.Left | WallFlag.Top);
-        setTerrain(4, 3, 1, WallFlag.Right | WallFlag.Top);
-        setTerrain(3, 4, 1, WallFlag.Left | WallFlag.Bottom);
-        setTerrain(4, 4, 1, WallFlag.Right | WallFlag.Bottom);
+//        setTerrain(3, 3, 1, WallFlag.Left | WallFlag.Top);
+//        setTerrain(4, 3, 1, WallFlag.Right | WallFlag.Top);
+//        setTerrain(3, 4, 1, WallFlag.Left | WallFlag.Bottom);
+//        setTerrain(4, 4, 1, WallFlag.Right | WallFlag.Bottom);
     }
 }

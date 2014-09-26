@@ -5,7 +5,8 @@ import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
 import com.thoughtworks.xstream.annotations.XStreamImplicit;
 import com.thoughtworks.xstream.annotations.XStreamOmitField;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.paint.Color;
+
+import java.util.Vector;
 
 @XStreamAlias("layer")
 public class Layer {
@@ -18,12 +19,12 @@ public class Layer {
     Map map;
 
     @XStreamImplicit(itemFieldName="tiles")
-    Tile.Ref[][] tiles;
+    TileRef[][] tiles;
 
     Layer(String name, Map map) {
         this.name = name;
         this.map = map;
-        tiles = new Tile.Ref[map.size.x][map.size.y];
+        tiles = new TileRef[map.size.x][map.size.y];
         this.visible = true;
     }
 
@@ -49,6 +50,13 @@ public class Layer {
             return false;
 
         return Tile.findByRef(tiles[ox][oy]).terrian == terrain;
+    }
+
+    TileRef getTile(Vector2i pos) {
+        if (pos.x < 0 || pos.x >= map.size.x || pos.y < 0 || pos.y >= map.size.y)
+            return null;
+
+        return tiles[pos.x][pos.y];
     }
 
 
