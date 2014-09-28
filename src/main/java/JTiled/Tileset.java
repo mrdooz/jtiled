@@ -7,7 +7,8 @@ import javafx.scene.image.Image;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.util.HashMap;
+import java.util.*;
+import java.util.Map;
 
 public class Tileset {
 
@@ -27,16 +28,30 @@ public class Tileset {
     @XStreamAlias("id")
     int id;
 
-    HashMap<Integer, TileRef> tilesByFlag = new HashMap<>();
+    HashMap<Long, TileRef> tilesByFlag = new HashMap<>();
 
     static Tileset findByRef(int id) {
         return Editor.instance.tilesets.get(id);
     }
 
-    void setTerrain(int x, int y, int terrain, int flags) {
+    void setTerrain(int x, int y, int terrain, long flags) {
         tiles[x][y].terrian = terrain;
         tiles[x][y].wallFlags = flags;
         tilesByFlag.put(flags, TileRef.valueOf(tiles[x][y]));
+    }
+
+    long makeFlags(long left, long top, long right, long bottom) {
+        return (left << WallFlag.Left) + (top << WallFlag.Top) + (right << WallFlag.Right) + (bottom << WallFlag.Bottom);
+    }
+
+    TileRef findTileByFlags(long wallFlags) {
+        for (Map.Entry<Long, TileRef> t : tilesByFlag.entrySet()) {
+            // check that the tile flags match each neighbour (each 3 bits)
+            long v = wallFlags & t.getKey().longValue();
+            if ( ((v & 0b111) > 0) && ((v & 0b111000) > 0) && ((v & 0b111000000) > 0) && ((v & 0b111000000000) > 0))
+                return t.getValue();
+        }
+        return null;
     }
 
     public Tileset(String name, String path, Vector2i tileSize, Vector2i offset, Vector2i padding) throws FileNotFoundException {
@@ -67,23 +82,27 @@ public class Tileset {
         }
 
         // hack hack!
-        setTerrain(0, 0, 1, WallFlag.Right | WallFlag.Bottom);
-        setTerrain(1, 0, 1, WallFlag.Left | WallFlag.Bottom | WallFlag.Right);
-        setTerrain(2, 0, 1, WallFlag.Left | WallFlag.Bottom);
+        long i = WallFlag.Inner;
+        long b = WallFlag.Border;
+        long a = i | b;
+        long o = WallFlag.Outer;
+        long x = WallFlag.DontCare;
 
-        setTerrain(0, 1, 1, WallFlag.Top | WallFlag.Right | WallFlag.Bottom);
-        setTerrain(1, 1, 1, WallFlag.Top | WallFlag.Right | WallFlag.Left | WallFlag.Bottom);
-        tilesByFlag.put(0, TileRef.valueOf(tiles[1][1]));
+        setTerrain(0, 0, 1, makeFlags(o, o, b, b));
+        setTerrain(1, 0, 1, makeFlags(b, o, b, a));
+        setTerrain(2, 0, 1, makeFlags(b, o, o, b));
 
-        setTerrain(2, 1, 1, WallFlag.Left | WallFlag.Top | WallFlag.Bottom);
+        setTerrain(0, 1, 1, makeFlags(o, b, a, b));
+        setTerrain(1, 1, 1, makeFlags(a, a, a, a));
+        setTerrain(2, 1, 1, makeFlags(a, b, o, b));
 
-        setTerrain(0, 2, 1, WallFlag.Right | WallFlag.Top);
-        setTerrain(1, 2, 1, WallFlag.Left | WallFlag.Top | WallFlag.Right);
-        setTerrain(2, 2, 1, WallFlag.Left | WallFlag.Top);
+        setTerrain(0, 2, 1, makeFlags(o, b, b, o));
+        setTerrain(1, 2, 1, makeFlags(b, a, b, o));
+        setTerrain(2, 2, 1, makeFlags(b, b, o, o));
 
-//        setTerrain(3, 3, 1, WallFlag.Left | WallFlag.Top);
-//        setTerrain(4, 3, 1, WallFlag.Right | WallFlag.Top);
-//        setTerrain(3, 4, 1, WallFlag.Left | WallFlag.Bottom);
-//        setTerrain(4, 4, 1, WallFlag.Right | WallFlag.Bottom);
+        setTerrain(3, 2, 1, makeFlags(i, i, b, b));
+        setTerrain(4, 2, 1, makeFlags(b, i, i, b));
+        setTerrain(3, 3, 1, makeFlags(i, b, b, i));
+        setTerrain(4, 3, 1, makeFlags(b, b, i, i));
     }
 }

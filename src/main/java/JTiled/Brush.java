@@ -6,7 +6,7 @@ public class Brush
 {
     Vector2i size;
     Tileset tileset;
-    Tile tiles[][];
+    TileRef tiles[][];
     Vector2i tileSize;
 
     Brush(Vector2i pos, Vector2i size, Tileset tileset) {
@@ -14,11 +14,11 @@ public class Brush
         this.size = size;
         this.tileset = tileset;
         this.tileSize = tileset.tileSize;
-        tiles = new Tile[size.x][size.y];
+        tiles = new TileRef[size.x][size.y];
 
         for (int y = 0; y < size.y; ++y) {
             for (int x = 0; x < size.x; ++x) {
-                tiles[x][y] = tileset.tiles[x+pos.x][y+pos.y];
+                tiles[x][y] = TileRef.valueOf(tileset.tiles[x+pos.x][y+pos.y]);
             }
         }
     }
@@ -29,7 +29,7 @@ public class Brush
 
         if (Editor.instance.paintMode == PaintMode.Terrain) {
             // draw the brush for terrain painting
-            Tile tile = tiles[0][0];
+            Tile tile = Tile.findByRef(tiles[0][0]);
             tile.Draw(gc, destX, destY);
 
         } else {
@@ -38,7 +38,7 @@ public class Brush
             for (int i = 0; i < size.y; ++i) {
                 double ofsX = 0;
                 for (int j = 0; j < size.x; ++j) {
-                    Tile tile = tiles[j][i];
+                    Tile tile = Tile.findByRef(tiles[j][i]);
                     tile.Draw(gc, destX + ofsX, destY + ofsY);
                     ofsX += tileSize.x;
                 }

@@ -21,10 +21,15 @@ public class Layer {
     @XStreamImplicit(itemFieldName="tiles")
     TileRef[][] tiles;
 
+    boolean [][] borderTiles;
+
     Layer(String name, Map map) {
         this.name = name;
         this.map = map;
-        tiles = new TileRef[map.size.x][map.size.y];
+        int x = map.size.x;
+        int y = map.size.y;
+        tiles = new TileRef[x][y];
+        this.borderTiles = new boolean[x][y];
         this.visible = true;
     }
 
@@ -38,6 +43,46 @@ public class Layer {
                 Tile tile = Tile.findByRef(tiles[j][i]);
                 if (tile != null) {
                     tile.Draw(gc, j * tileSize.x, i * tileSize.y);
+                }
+            }
+        }
+    }
+
+    void setTile(Vector2i pos, TileRef tile) {
+        tiles[pos.x][pos.y] = tile;
+    }
+
+    boolean isBorder(Vector2i pos, int xOfs, int yOfs) {
+        int x = pos.x + xOfs;
+        int y = pos.y + yOfs;
+
+        if (x < 0 || x >= map.size.x || y < 0 || y >= map.size.y)
+            return true;
+
+        return borderTiles[x][y];
+    }
+
+    void calcBorder() {
+
+        for (int y = 0; y < map.size.y; ++y) {
+            for (int x = 0; x < map.size.x; ++x) {
+                TileRef r = tiles[x][y];
+                borderTiles[x][y] = true;
+                if (r == null)
+                    continue;
+
+                Tile t = Tile.findByRef(r);
+                int terrain = t.terrian;
+                int[] ofs = {
+                        -1, +0, +1, +0, +0, +1, +0, -1,
+                        -1, -1, +1, -1, -1, +1, +1, +1 };
+
+                borderTiles[x][y] = false;
+                for (int i = 0; i < 8; ++i) {
+                    if (!sameTerrain(new Vector2i(x, y), ofs[i * 2 + 0], ofs[i * 2 + 1], terrain)) {
+                        borderTiles[x][y] = true;
+                        break;
+                    }
                 }
             }
         }

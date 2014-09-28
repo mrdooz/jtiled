@@ -23,7 +23,7 @@ public class Tile {
     @XStreamAsAttribute
     int terrian;
     @XStreamAsAttribute
-    int wallFlags;
+    long wallFlags;
 
     Tile(Vector2i pos, int tilesetId) {
         this.pos = pos;

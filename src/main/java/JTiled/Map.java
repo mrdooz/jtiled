@@ -113,15 +113,18 @@ public class Map {
                 if (x < 0 || x >= size.x || y < 0 || y >= size.y)
                     continue;
 
-                Tile b = brush.tiles[j][i];
-                curLayer.tiles[x][y] = TileRef.valueOf(b);
+                curLayer.tiles[x][y] = brush.tiles[j][i];
             }
         }
     }
 
     private void ApplyTerrainBrush(Brush brush, Vector2i pos) {
 
-        System.out.println("\npos: " + pos);
+        // Set the brushed tile to the current terrain
+        curLayer.setTile(pos, brush.tiles[0][0]);
+
+        // Recalc border tiles
+        curLayer.calcBorder();
 
         // In terrain mode, collect all the adjacent tiles that share the same terrain,
         // and then apply edge rules to determine which tile should be used
@@ -155,23 +158,26 @@ public class Map {
 
         for (Vector2i b : flood) {
             // look at the four neighbouring tiles, and determine which walls are needed
-            int flags = 0;
-            if (curLayer.sameTerrain(b, -1, +0, terrain))
-                flags |= WallFlag.Left;
-            if (curLayer.sameTerrain(b, +0, -1, terrain))
-                flags |= WallFlag.Top;
-            if (curLayer.sameTerrain(b, +1, +0, terrain))
-                flags |= WallFlag.Right;
-            if (curLayer.sameTerrain(b, +0, +1, terrain))
-                flags |= WallFlag.Bottom;
+            long flags
+                    = flagCombine(b, -1, +0, terrain, WallFlag.Left)
+                    + flagCombine(b, +1, +0, terrain, WallFlag.Right)
+                    + flagCombine(b, +0, -1, terrain, WallFlag.Top)
+                    + flagCombine(b, +0, +1, terrain, WallFlag.Bottom);
 
-            TileRef r = brush.tileset.tilesByFlag.get(flags);
+            TileRef r = brush.tileset.findTileByFlags(flags);
             if (r == null) {
                 int a = 10;
             }
 
-            curLayer.tiles[b.x][b.y] = r != null ? r : TileRef.valueOf(brush.tiles[0][0]); //  brush.tileset.tilesByFlag.get(flags);
+            curLayer.tiles[b.x][b.y] = r != null ? r : brush.tiles[0][0]; //  brush.tileset.tilesByFlag.get(flags);
         }
+    }
+
+    long flagCombine(Vector2i pos, int xOfs, int yOfs, int terrain, long shift) {
+        if (curLayer.sameTerrain(pos, xOfs, yOfs, terrain))
+            return (curLayer.isBorder(pos, xOfs, yOfs) ? WallFlag.Border : WallFlag.Inner) << shift;
+
+        return WallFlag.Outer << shift;
     }
 
     void ApplyBrush(Brush brush, Vector2i pos) {
