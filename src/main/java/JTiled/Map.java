@@ -159,10 +159,14 @@ public class Map {
         for (Vector2i b : flood) {
             // look at the four neighbouring tiles, and determine which walls are needed
             long flags
-                    = flagCombine(b, -1, +0, terrain, WallFlag.Left)
-                    + flagCombine(b, +1, +0, terrain, WallFlag.Right)
-                    + flagCombine(b, +0, -1, terrain, WallFlag.Top)
-                    + flagCombine(b, +0, +1, terrain, WallFlag.Bottom);
+                    = flagCombine(b, terrain, WallFlag.W)
+                    + flagCombine(b, terrain, WallFlag.NW)
+                    + flagCombine(b, terrain, WallFlag.N)
+                    + flagCombine(b, terrain, WallFlag.NE)
+                    + flagCombine(b, terrain, WallFlag.E)
+                    + flagCombine(b, terrain, WallFlag.SE)
+                    + flagCombine(b, terrain, WallFlag.S)
+                    + flagCombine(b, terrain, WallFlag.SW);
 
             TileRef r = brush.tileset.findTileByFlags(flags);
             if (r == null) {
@@ -173,7 +177,11 @@ public class Map {
         }
     }
 
-    long flagCombine(Vector2i pos, int xOfs, int yOfs, int terrain, long shift) {
+    long flagCombine(Vector2i pos, int terrain, long shift) {
+        Vector2i ofs = WallFlag.dir[(int)(shift / 3)];
+        int xOfs = ofs.x;
+        int yOfs = ofs.y;
+
         if (curLayer.sameTerrain(pos, xOfs, yOfs, terrain))
             return (curLayer.isBorder(pos, xOfs, yOfs) ? WallFlag.Border : WallFlag.Inner) << shift;
 

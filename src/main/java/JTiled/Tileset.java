@@ -40,15 +40,23 @@ public class Tileset {
         tilesByFlag.put(flags, TileRef.valueOf(tiles[x][y]));
     }
 
-    long makeFlags(long left, long top, long right, long bottom) {
-        return (left << WallFlag.Left) + (top << WallFlag.Top) + (right << WallFlag.Right) + (bottom << WallFlag.Bottom);
+    long makeFlags(long w, long nw, long n, long ne, long e, long se, long s, long sw) {
+        return  (w << WallFlag.W) + (nw << WallFlag.NW) + (n << WallFlag.N) + (ne << WallFlag.NE) +
+                (e << WallFlag.E) + (se << WallFlag.SE) + (s << WallFlag.S) + (sw << WallFlag.SW);
     }
 
     TileRef findTileByFlags(long wallFlags) {
         for (Map.Entry<Long, TileRef> t : tilesByFlag.entrySet()) {
             // check that the tile flags match each neighbour (each 3 bits)
             long v = wallFlags & t.getKey().longValue();
-            if ( ((v & 0b111) > 0) && ((v & 0b111000) > 0) && ((v & 0b111000000) > 0) && ((v & 0b111000000000) > 0))
+            boolean found = true;
+            for (int i = 0; i < 8; ++i) {
+                if ((v & WallFlag.mask[i]) == 0) {
+                    found = false;
+                    break;
+                }
+            }
+            if (found)
                 return t.getValue();
         }
         return null;
@@ -88,21 +96,21 @@ public class Tileset {
         long o = WallFlag.Outer;
         long x = WallFlag.DontCare;
 
-        setTerrain(0, 0, 1, makeFlags(o, o, b, b));
-        setTerrain(1, 0, 1, makeFlags(b, o, b, a));
-        setTerrain(2, 0, 1, makeFlags(b, o, o, b));
+        setTerrain(0, 0, 1, makeFlags(o, x, o, x, b, x, b, x));
+        setTerrain(1, 0, 1, makeFlags(b, x, o, x, b, x, a, x));
+        setTerrain(2, 0, 1, makeFlags(b, x, o, x, o, x, b, x));
 
-        setTerrain(0, 1, 1, makeFlags(o, b, a, b));
-        setTerrain(1, 1, 1, makeFlags(a, a, a, a));
-        setTerrain(2, 1, 1, makeFlags(a, b, o, b));
+        setTerrain(0, 1, 1, makeFlags(o, x, b, x, a, x, b, x));
+        setTerrain(1, 1, 1, makeFlags(a, a, a, a, a, a, a, a));
+        setTerrain(2, 1, 1, makeFlags(a, x, b, x, o, x, b, x));
 
-        setTerrain(0, 2, 1, makeFlags(o, b, b, o));
-        setTerrain(1, 2, 1, makeFlags(b, a, b, o));
-        setTerrain(2, 2, 1, makeFlags(b, b, o, o));
+        setTerrain(0, 2, 1, makeFlags(o, x, b, x, b, x, o, x));
+        setTerrain(1, 2, 1, makeFlags(b, x, a, x, b, x, o, x));
+        setTerrain(2, 2, 1, makeFlags(b, x, b, x, o, x, o, x));
 
-        setTerrain(3, 2, 1, makeFlags(i, i, b, b));
-        setTerrain(4, 2, 1, makeFlags(b, i, i, b));
-        setTerrain(3, 3, 1, makeFlags(i, b, b, i));
-        setTerrain(4, 3, 1, makeFlags(b, b, i, i));
+        setTerrain(3, 2, 1, makeFlags(a, a, a, a, b, o, b, a));
+        setTerrain(4, 2, 1, makeFlags(b, a, a, a, a, a, b, o));
+        setTerrain(3, 3, 1, makeFlags(a, a, b, o, b, a, a, a));
+        setTerrain(4, 3, 1, makeFlags(b, o, b, a, a, a, a, a));
     }
 }
